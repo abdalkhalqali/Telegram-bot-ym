@@ -1,0 +1,5 @@
+- name: Run bot
+  env:
+    BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+    GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+  run: python bot.py
