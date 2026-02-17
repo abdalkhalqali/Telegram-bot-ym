@@ -1,31 +1,22 @@
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from google import genai
+import requests
 import os
 
-# ========== قراءة المفاتيح من Environment Variables ==========
+# ========== قراءة المفاتيح من Environment Variables فقط ==========
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-GEMINI_KEY = os.environ.get('GEMINI_KEY')
+OPENROUTER_KEY = os.environ.get('OPENROUTER_KEY')
 
-if not BOT_TOKEN or not GEMINI_KEY:
-    raise ValueError("❌ المفاتيح غير موجودة في Environment Variables! أضفها في إعدادات Render.")
+if not BOT_TOKEN or not OPENROUTER_KEY:
+    raise ValueError("❌ المفاتيح غير موجودة في Environment Variables!")
 
-# تهيئة Gemini بالمكتبة الجديدة
-client = genai.Client(api_key=GEMINI_KEY)
-
-# ========== إعدادات logging الصحيحة (تم التصحيح) ==========
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO,
-    datefmt='%Y-%m-%d %H:%M:%S'
+    level=logging.INFO
 )
 
-# تعطيل التحذيرات المزعجة (اختياري)
-logging.getLogger('httpx').setLevel(logging.WARNING)
-logging.getLogger('telegram.vendor.ptb_urllib3.urllib3').setLevel(logging.WARNING)
-
-# ========== المعرفات الخاصة ==========
+# ========== المعرفات ==========
 ABRAR_ID = 1406525284
 OWNER_ID = 6818088581
 
@@ -38,16 +29,15 @@ async def send_to_owner(context, text):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    user_name = update.message.from_user.first_name
     
     await update.message.reply_text(
-        "👋 **مرحباً بك في بوت Gemini!**\n\n"
+        "👋 **مرحباً بك في بوت الذكاء الاصطناعي!**\n\n"
         "✨ أرسل لي أي سؤال وسأجيبك.",
         parse_mode='Markdown'
     )
     
     if user_id == ABRAR_ID:
-        await send_to_owner(context, f"🌟 أبرار دخلت البوت: {user_name}")
+        await send_to_owner(context, f"🌟 أبرار دخلت البوت!")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -57,46 +47,55 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
 
     try:
-        # استخدام Gemini للإجابة
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=user_message
+        # استخدام المفتاح من Environment Variables
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://t.me/your_bot",
+                "X-Title": "Telegram Bot"
+            },
+            json={
+                "model": "meta-llama/llama-3-8b-instruct",
+                "messages": [
+                    {"role": "system", "content": "You are a helpful assistant. Answer in the same language as the user."},
+                    {"role": "user", "content": user_message}
+                ]
+            },
+            timeout=30
         )
         
-        if response and response.text:
-            reply_text = response.text
-            await update.message.reply_text(reply_text)
+        data = response.json()
+        
+        if response.status_code == 200:
+            reply = data['choices'][0]['message']['content']
+            await update.message.reply_text(reply)
             
-            # إذا كانت أبرار، أرسل نسخة للمالك
             if user_id == ABRAR_ID:
                 await send_to_owner(
                     context,
-                    f"📩 **رسالة من أبرار**\n"
-                    f"👤 {user_name}\n"
-                    f"💬 {user_message[:100]}...\n"
-                    f"🤖 {reply_text[:100]}..."
+                    f"📩 **أبرار**\n"
+                    f"💬 {user_message[:50]}...\n"
+                    f"🤖 {reply[:50]}..."
                 )
         else:
-            await update.message.reply_text("عذراً، لم أستطع الإجابة.")
+            error_msg = data.get('error', {}).get('message', 'خطأ غير معروف')
+            await update.message.reply_text(f"❌ خطأ: {error_msg}")
             
     except Exception as e:
-        error_msg = str(e)
-        logging.error(f"خطأ: {error_msg}")
-        await update.message.reply_text(f"❌ حدث خطأ: {error_msg[:100]}")
+        logging.error(f"خطأ: {e}")
+        await update.message.reply_text(f"❌ حدث خطأ: {str(e)[:100]}")
 
 def main():
-    """تشغيل البوت"""
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     print("=" * 50)
-    print("🤖 بوت Gemini - النسخة النهائية")
+    print("🤖 البوت يعمل - المفاتيح من Environment Variables")
     print("=" * 50)
-    print(f"✅ BOT_TOKEN: موجود")
-    print(f"✅ GEMINI_KEY: موجود")
-    print(f"👤 أبرار: {ABRAR_ID}")
-    print(f"👑 المالك: {OWNER_ID}")
+    print("✅ آمن - لا مفاتيح في الكود")
     print("=" * 50)
     
     app.run_polling()
