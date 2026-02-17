@@ -4,7 +4,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import requests
 import os
 
-# ========== قراءة المفاتيح من Environment Variables فقط ==========
+# ========== قراءة المفاتيح من Environment Variables ==========
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 OPENROUTER_KEY = os.environ.get('OPENROUTER_KEY')
 
@@ -32,7 +32,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         "👋 **مرحباً بك في بوت الذكاء الاصطناعي!**\n\n"
-        "✨ أرسل لي أي سؤال وسأجيبك.",
+        "✨ أرسل لي أي سؤال وسأجيبك بالعربية.",
         parse_mode='Markdown'
     )
     
@@ -47,7 +47,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
 
     try:
-        # استخدام المفتاح من Environment Variables
+        # ✅ النظام الجديد - يطلب العربية فقط
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={
@@ -59,9 +59,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             json={
                 "model": "meta-llama/llama-3-8b-instruct",
                 "messages": [
-                    {"role": "system", "content": "You are a helpful assistant. Answer in the same language as the user."},
+                    {"role": "system", "content": "أنت مساعد ذكي. يجب أن ترد باللغة العربية الفصحى فقط. لا تستخدم أي لغة أخرى مهما كان السؤال. حتى إذا سأل المستخدم بالإنجليزية، رد بالعربية."},
                     {"role": "user", "content": user_message}
-                ]
+                ],
+                "temperature": 0.3  # درجة حرارة منخفضة = ردود أكثر دقة
             },
             timeout=30
         )
@@ -93,9 +94,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     print("=" * 50)
-    print("🤖 البوت يعمل - المفاتيح من Environment Variables")
-    print("=" * 50)
-    print("✅ آمن - لا مفاتيح في الكود")
+    print("🤖 البوت يعمل - ردود عربية فقط")
     print("=" * 50)
     
     app.run_polling()
