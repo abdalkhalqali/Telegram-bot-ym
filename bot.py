@@ -55,7 +55,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     welcome_text = "👋 **مرحباً بك في بوت الذكاء الاصطناعي!**\n\n✨ أرسل لي أي سؤال وسأجيبك."
     
-    if user_id == FATIMA_ID:  # تغيير من ABRAR_ID إلى FATIMA_ID
+    if user_id == FATIMA_ID:
         welcome_text = f"🌸 **أهلاً فاطمة المطيري!** 🌸\n\nأهلاً بك!"
         await send_to_owner(context, f"🌟 فاطمة المطيري دخلت البوت")
     
@@ -111,7 +111,7 @@ async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(message, parse_mode='Markdown')
 
 async def send_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """إرسال رسالة لمستخدم معين (للمالك فقط)"""
+    """إرسال رسالة لمستخدم معين (للمالك فقط) - بدون ظهور عبارة رسالة من المالك"""
     user_id = update.effective_user.id
     
     if user_id != OWNER_ID:
@@ -133,12 +133,13 @@ async def send_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_id = int(context.args[0])
         message = ' '.join(context.args[1:])
         
-        success = await send_to_user(context, target_id, f"📨 **رسالة من المالك:**\n\n{message}")
+        # إرسال الرسالة بشكل عادي بدون أي إضافات
+        success = await send_to_user(context, target_id, message)
         
         if success:
             await update.message.reply_text(f"✅ تم إرسال الرسالة بنجاح إلى `{target_id}`", parse_mode='Markdown')
             
-            # إرسال إشعار للمالك بأن الرسالة وصلت (اختياري)
+            # إرسال إشعار للمالك بأن الرسالة وصلت
             user_info = users_db.get(target_id, {})
             if user_info:
                 await send_to_owner(
@@ -156,7 +157,7 @@ async def send_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ حدث خطأ: {str(e)}")
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """إرسال رسالة لجميع المستخدمين (للمالك فقط)"""
+    """إرسال رسالة لجميع المستخدمين (للمالك فقط) - بدون إضافات"""
     user_id = update.effective_user.id
     
     if user_id != OWNER_ID:
@@ -185,7 +186,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for uid in users_db.keys():
         if uid != OWNER_ID:  # لا ترسل للمالك نفسه
-            if await send_to_user(context, uid, f"📢 **رسالة عامة:**\n\n{message}"):
+            if await send_to_user(context, uid, message):
                 success_count += 1
             else:
                 fail_count += 1
@@ -286,9 +287,11 @@ def main():
     print(f"   • عبدالخالق (ID: {ABDULKHALIQ_ID})")
     print("=" * 50)
     print("✅ أوامر المالك المتاحة:")
-    print("   • /send [المعرف] [الرسالة]")
-    print("   • /users")
-    print("   • /broadcast [الرسالة]")
+    print("   • /send [المعرف] [الرسالة] - إرسال رسالة عادية لمستخدم")
+    print("   • /users - عرض جميع المستخدمين")
+    print("   • /broadcast [الرسالة] - إرسال رسالة للجميع")
+    print("=" * 50)
+    print("✅ ملاحظة: رسائل /send و /broadcast ترسل بشكل عادي بدون عبارة 'رسالة من المالك'")
     print("=" * 50)
     
     app.run_polling()
