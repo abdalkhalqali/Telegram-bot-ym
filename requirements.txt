@@ -1,2 +1,4 @@
 python-telegram-bot>=21.10
 requests
+psutil>=5.9.0
+humanize>=4.9.0
